@@ -1,0 +1,19 @@
+[package]
+name = "doorstep-admin"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.7.4", features = ["http2", "multipart", "tracing"] }
+dotenvy = "0.15.7"
+envy = "0.4.2"
+eyre = "0.6.12"
+image = "0.25.0"
+ipnet = { version = "2.9.0", features = ["serde"] }
+serde = { version = "1.0.197", features = ["derive"] }
+tokio = { version = "1.36.0", features = ["full", "tracing"] }
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["time", "parking_lot", "env-filter"] }
+tracing-tree = { version = "0.3.0", features = ["time"] }
