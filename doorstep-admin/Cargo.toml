@@ -7,13 +7,18 @@ edition = "2021"
 
 [dependencies]
 axum = { version = "0.7.4", features = ["http2", "multipart", "tracing"] }
+displaydoc = "0.2.4"
 dotenvy = "0.15.7"
 envy = "0.4.2"
 eyre = "0.6.12"
 image = "0.25.0"
 ipnet = { version = "2.9.0", features = ["serde"] }
+lz4 = "1.24.0"
 serde = { version = "1.0.197", features = ["derive"] }
+thiserror = "1.0.58"
 tokio = { version = "1.36.0", features = ["full", "tracing"] }
+tower-http = { version = "0.5.2", features = ["trace"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["time", "parking_lot", "env-filter"] }
 tracing-tree = { version = "0.3.0", features = ["time"] }
+xxhash-rust = { version = "0.8.10", features = ["xxh3"] }

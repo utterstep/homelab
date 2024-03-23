@@ -14,7 +14,7 @@ fn default_background_height() -> u32 {
 #[derive(Deserialize)]
 pub struct Config {
     listen_addr: String,
-    allowed_configuration_from: IpNet,
+    admin_subnet: IpNet,
     backgrounds_dir: PathBuf,
     #[serde(default = "default_background_width")]
     background_width: u32,
@@ -28,8 +28,8 @@ impl Config {
         &self.listen_addr
     }
 
-    pub fn allowed_configuration_from(&self) -> &IpNet {
-        &self.allowed_configuration_from
+    pub fn admin_subnet(&self) -> &IpNet {
+        &self.admin_subnet
     }
 
     pub fn backgrounds_dir(&self) -> &Path {
