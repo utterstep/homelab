@@ -21,4 +21,4 @@ tower-http = { version = "0.5.2", features = ["trace"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["time", "parking_lot", "env-filter"] }
 tracing-tree = { version = "0.3.0", features = ["time"] }
-xxhash-rust = { version = "0.8.10", features = ["xxh64"] }
+xxhash-rust = { version = "0.8.10", features = ["xxh32"] }

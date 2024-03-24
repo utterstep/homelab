@@ -9,7 +9,7 @@ use eyre::WrapErr;
 use serde::Deserialize;
 use tokio::fs::{self, File};
 use tracing::{debug, info};
-use xxhash_rust::xxh64::xxh64;
+use xxhash_rust::xxh32::xxh32;
 
 use crate::{error::DoorstepError, image::image_to_bitmap, state::AppState};
 
@@ -100,7 +100,7 @@ pub async fn update_background(
 
 #[derive(Debug, Deserialize)]
 pub struct BackgroundRequestQuery {
-    known_hash: Option<u64>,
+    known_hash: Option<u32>,
 }
 
 /// Get the current background image
@@ -117,12 +117,11 @@ pub async fn get_background(
         None => return (StatusCode::NOT_FOUND, "No background set").into_response(),
     };
 
-    let hash = xxh64(&background, 3140);
+    let hash = xxh32(&background, 3140);
     info!(hash, "Sending background image");
 
     if let Some(known_hash) = query.known_hash {
         debug!(known_hash, "Checking if background is modified");
-        let hash = xxh64(&background, 3140);
         if hash == known_hash {
             info!(hash, "Background not modified");
             return (StatusCode::NOT_MODIFIED, "Background not modified").into_response();
