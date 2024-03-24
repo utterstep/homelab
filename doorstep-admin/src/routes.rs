@@ -1,14 +1,15 @@
-use std::{io::Write, net::SocketAddr};
+use std::net::SocketAddr;
 
 use axum::{
-    extract::{ConnectInfo, Multipart, State},
+    extract::{ConnectInfo, Multipart, Query, State},
     http::StatusCode,
     response::{IntoResponse, Json, Response},
 };
 use eyre::WrapErr;
-use lz4::EncoderBuilder;
+use serde::Deserialize;
 use tokio::fs::{self, File};
-use tracing::debug;
+use tracing::{debug, info};
+use xxhash_rust::xxh64::xxh64;
 
 use crate::{error::DoorstepError, image::image_to_bitmap, state::AppState};
 
@@ -97,44 +98,36 @@ pub async fn update_background(
     Ok::<_, DoorstepError>((StatusCode::OK, "Background updated successfully"))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct BackgroundRequestQuery {
+    known_hash: Option<u64>,
+}
+
 /// Get the current background image
 ///
 /// If no background image is set, this will return a 404
 #[tracing::instrument(skip(app_state))]
-pub async fn get_background(State(app_state): State<AppState>) -> Response {
+pub async fn get_background(
+    State(app_state): State<AppState>,
+    Query(query): Query<BackgroundRequestQuery>,
+) -> Response {
     let background = app_state.background.lock().await;
     let background = match &*background {
         Some(bytes) => bytes.clone(),
         None => return (StatusCode::NOT_FOUND, "No background set").into_response(),
     };
 
+    let hash = xxh64(&background, 3140);
+    info!(hash, "Sending background image");
+
+    if let Some(known_hash) = query.known_hash {
+        debug!(known_hash, "Checking if background is modified");
+        let hash = xxh64(&background, 3140);
+        if hash == known_hash {
+            info!(hash, "Background not modified");
+            return (StatusCode::NOT_MODIFIED, "Background not modified").into_response();
+        }
+    }
+
     (StatusCode::OK, background).into_response()
-}
-
-/// Get the current background image, compressed using LZ4 algorithm
-///
-/// If no background image is set, this will return a 404
-#[tracing::instrument(skip(app_state))]
-pub async fn get_background_lz4(State(app_state): State<AppState>) -> impl IntoResponse {
-    let background = app_state.background.lock().await;
-    let background = match &*background {
-        Some(bytes) => bytes.clone(),
-        None => return Ok((StatusCode::NOT_FOUND, "No background set").into_response()),
-    };
-
-    debug!(original = background.len(), "Compressing background image");
-
-    let mut encoder = EncoderBuilder::new()
-        .build(Vec::new())
-        .wrap_err("Failed to create LZ4 encoder")?;
-    encoder
-        .write_all(&background)
-        .wrap_err("Failed to write background to LZ4 encoder")?;
-
-    let (background, error) = encoder.finish();
-    error.wrap_err("Failed to compress background")?;
-
-    debug!(compressed = background.len(), "Background image compressed");
-
-    Ok::<_, DoorstepError>((StatusCode::OK, background).into_response())
 }

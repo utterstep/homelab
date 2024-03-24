@@ -57,9 +57,7 @@ async fn main() -> Result<()> {
             middlewares::admin_subnet_restricted,
         ));
 
-    let common_router = axum::Router::new()
-        .route("/background/lz4/", get(routes::get_background_lz4))
-        .route("/background/", get(routes::get_background));
+    let common_router = axum::Router::new().route("/background/", get(routes::get_background));
 
     let app = axum::Router::new()
         .nest("/admin", priviliged_router)
