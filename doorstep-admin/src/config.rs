@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use ipnet::IpNet;
 use serde::Deserialize;
 
+pub const HASH_SEED: u32 = 3140;
+
 fn default_background_width() -> u32 {
     960
 }
