@@ -48,7 +48,7 @@ pub async fn handle_stream(app_state: Arc<AppState>, socket: TcpStream, peer: So
 
                 match client
                     .insert_native_block(
-                        "INSERT INTO access_log FORMAT NATIVE",
+                        "INSERT INTO access_log SETTINGS async_insert=1, wait_for_async_insert=0 FORMAT NATIVE",
                         vec![db_access_log_entry],
                     )
                     .await
