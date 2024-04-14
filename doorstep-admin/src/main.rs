@@ -14,6 +14,8 @@ use tracing_tree::HierarchicalLayer;
 mod config;
 use config::Config;
 
+mod controllers;
+
 mod error;
 
 mod image;
@@ -38,7 +40,7 @@ async fn main() -> Result<()> {
                 .with_targets(true)
                 .with_indent_lines(true)
                 .with_bracketed_fields(true)
-                .with_thread_names(true)
+                .with_thread_names(false)
                 .with_thread_ids(true),
         )
         .init();

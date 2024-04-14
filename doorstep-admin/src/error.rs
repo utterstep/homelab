@@ -1,10 +1,15 @@
-use axum::response::IntoResponse;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use displaydoc::Display;
 use eyre::Report;
 use thiserror::Error;
 
 #[derive(Debug, Display, Error)]
 pub enum DoorstepError {
+    /// Not found: {0}
+    NotFound(String),
     /// Internal error: {0}
     InternalError(#[from] Report),
     /// Invalid request: {0}
@@ -18,9 +23,15 @@ impl From<&str> for DoorstepError {
 }
 
 impl IntoResponse for DoorstepError {
-    fn into_response(self) -> axum::http::Response<axum::body::Body> {
-        let message = format!("Error while processing request: {}", self);
+    fn into_response(self) -> Response<axum::body::Body> {
+        match self {
+            Self::NotFound(message) => (StatusCode::NOT_FOUND, message).into_response(),
+            Self::InvalidRequest(message) => (StatusCode::BAD_REQUEST, message).into_response(),
+            Self::InternalError(error) => {
+                let message = format!("Error while processing request: {}", error);
 
-        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, message).into_response()
+                (StatusCode::INTERNAL_SERVER_ERROR, message).into_response()
+            }
+        }
     }
 }
