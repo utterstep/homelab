@@ -10,12 +10,15 @@ use crate::{
     log::{db::DbAccessLogEntry, AccessLogEntry},
 };
 
+/// Maximum line payload for one access log entry is 10MB
+const MAX_LINE_LENGTH: usize = 10 * 1024 * 1024;
+
 pub async fn handle_stream(app_state: Arc<AppState>, socket: TcpStream, peer: SocketAddr) {
-    let mut framed = Framed::new(socket, LinesCodec::new());
+    let mut framed = Framed::new(socket, LinesCodec::new_with_max_length(MAX_LINE_LENGTH));
 
     while let Some(line) = framed.next().await {
         let frame_uuid = uuid::Uuid::now_v7();
-        let span = tracing::info_span!("frame", peer_addr = %peer, frame_uuid = %frame_uuid);
+        let frame_span = tracing::info_span!("frame", peer_addr = %peer, frame_uuid = %frame_uuid);
         let app_state = Arc::clone(&app_state);
 
         // running everything inside the async block to correctly instrument it
@@ -25,7 +28,13 @@ pub async fn handle_stream(app_state: Arc<AppState>, socket: TcpStream, peer: So
             match line {
                 Ok(line) => {
                     debug!(frame_len = line.len(), "Received line");
-                    let access_log_entry: AccessLogEntry = serde_json::from_str(&line).unwrap();
+                    let access_log_entry: AccessLogEntry = match serde_json::from_str(&line) {
+                        Ok(entry) => entry,
+                        Err(e) => {
+                            error!("Failed to parse line: {}", e);
+                            return;
+                        }
+                    };
                     debug!("Parsed line");
 
                     let db_access_log_entry = DbAccessLogEntry::new(
@@ -42,6 +51,7 @@ pub async fn handle_stream(app_state: Arc<AppState>, socket: TcpStream, peer: So
                             return;
                         }
                     };
+                    debug!("Got CH client from pool");
 
                     match client
                         .insert_native_block(
@@ -62,7 +72,7 @@ pub async fn handle_stream(app_state: Arc<AppState>, socket: TcpStream, peer: So
                     error!("Failed to read line: {}", e);
                 }
             }
-        }.instrument(span)
+        }.instrument(frame_span)
         .await
     }
 }

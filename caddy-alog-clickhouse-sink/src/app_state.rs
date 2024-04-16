@@ -28,7 +28,7 @@ impl AppState {
             })?;
 
         let pool = Pool::builder()
-            .max_size(10)
+            .max_size(20)
             .build(manager)
             .await
             .wrap_err_with(|| {
