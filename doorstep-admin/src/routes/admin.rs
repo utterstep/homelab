@@ -50,18 +50,31 @@ pub async fn background_admin_page(State(state): State<AppState>) -> impl IntoRe
                     div class="main-container" {
                         // left panel – list of clickable backgrounds
                         div {
-                            h2 { "Existing" }
-                            ul {
+                            div
+                                data-controller="background-preview"
+                                data-background-preview-width-value={(width)}
+                                data-background-preview-height-value={(height)}
+                                class="background-preview"
+                                style="display: none; position: fixed; z-index: 1000;"
+                            {
+                                    img
+                                        class="background-preview-image"
+                                        data-background-preview-target="preview";
+                            }
+
+                            h2 { "Background history" }
+                            ul class="background-list" {
                                 @for background in backgrounds {
                                     @let current = background.name() == current_background_name;
-                                    li {
+                                    li class="background-list-item" {
                                         a
                                             href="#"
                                             data-controller="previous-background"
                                             data-previous-background-is-current-value={(current)}
                                             data-previous-background-filename-value={(background.name())}
                                             data-previous-background-background-canvas-outlet=".background-canvas-container"
-                                            data-action="click->previous-background#loadToCanvas"
+                                            data-previous-background-background-preview-outlet=".background-preview"
+                                            data-action="click->previous-background#loadToCanvas mousemove->previous-background#preview mouseleave->previous-background#hidePreview"
                                         { (background.name()) }
                                     }
                                 }
@@ -71,7 +84,7 @@ pub async fn background_admin_page(State(state): State<AppState>) -> impl IntoRe
                         div {
                             div {
                                 h2 { "Update" }
-                                h3 { "Create new background" }
+                                h3 { "Draw on existing background" }
                                 div
                                     class="background-canvas-container"
                                     data-controller="background-canvas"
@@ -82,7 +95,6 @@ pub async fn background_admin_page(State(state): State<AppState>) -> impl IntoRe
                                         class="background-canvas"
                                         data-background-canvas-target="canvas"
                                     {}
-                                    // line width slider
                                     label for="line-width" {
                                         "Line width: "
                                         span data-background-canvas-target="lineWidth" { "8px" }
@@ -96,11 +108,13 @@ pub async fn background_admin_page(State(state): State<AppState>) -> impl IntoRe
                                         data-action="input->background-canvas#changeLineWidth"
                                     {}
 
-                                    div {
-                                        em {
-                                            "Click on the file on left to change the background"
-                                        }
-                                    }
+                                    label for="background-name" { "Name: " }
+                                    input
+                                        id="background-name"
+                                        type="text"
+                                        name="background-name"
+                                        data-background-canvas-target="nameInput"
+                                    {}
 
                                     div {
                                         // two buttons – save and clear

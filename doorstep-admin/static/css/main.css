@@ -1,6 +1,16 @@
+header,
+main {
+    padding: 1rem;
+}
+
+hr {
+    margin: 2rem 0;
+}
+
 .main-container {
     display: grid;
-    grid-template-columns: 250px auto;
+    grid-template-columns: 300px auto;
+    gap: 0 20px;
 }
 
 .background-canvas {
@@ -12,4 +22,24 @@
     --color-bg: #000000;
 
     margin-left: 10px;
+}
+
+.background-list {
+    padding-left: 0;
+}
+
+.background-list-item {
+    list-style: none;
+}
+
+.background-preview {
+    border: 1px solid black;
+    background: white;
+
+    padding: 4px;
+}
+
+.background-preview-image {
+    max-width: 100%;
+    height: auto;
 }

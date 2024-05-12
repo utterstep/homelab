@@ -3,7 +3,7 @@ import { Controller } from "https://esm.sh/@hotwired/stimulus@3.2.2";
 window.Stimulus.register(
     "background-canvas",
     class extends Controller {
-        static targets = ["canvas", "lineWidth"];
+        static targets = ["canvas", "lineWidth", "nameInput"];
 
         static values = {
             width: Number,
@@ -36,14 +36,14 @@ window.Stimulus.register(
         }
 
         async save() {
+            // add timestamp to the filename to avoid overwriting
+            const name = this.nameInputTarget.value;
+            const timestamp = Math.round(new Date().getTime() / 1000);
+            const filename = `${name}-${timestamp}.png`;
+
             this.canvasTarget.toBlob(async (pngBlob) => {
                 const formData = new FormData();
-                const timestamp = new Date().getTime() / 1000;
-                formData.append(
-                    "background",
-                    pngBlob,
-                    `background-admin-${timestamp}.png`,
-                );
+                formData.append("background", pngBlob, filename);
 
                 const response = await fetch("/admin/background/update/", {
                     method: "POST",
@@ -74,6 +74,8 @@ window.Stimulus.register(
             img.onload = () => {
                 this.ctx.drawImage(img, 0, 0);
             };
+
+            this.nameInputTarget.value = url.split("/").pop().split(".")[0];
         }
 
         initDrawing() {
@@ -90,6 +92,7 @@ window.Stimulus.register(
 
             const startDrawing = (e) => {
                 pressedMouse = true;
+
                 x = e.offsetX * this.dpr;
                 y = e.offsetY * this.dpr;
             };
@@ -97,8 +100,8 @@ window.Stimulus.register(
             const drawLine = (e) => {
                 if (pressedMouse) {
                     this.canvasTarget.style.cursor = "crosshair";
-                    var xM = e.offsetX * this.dpr;
-                    var yM = e.offsetY * this.dpr;
+                    const xM = e.offsetX * this.dpr;
+                    const yM = e.offsetY * this.dpr;
                     drawLineOnCanvas(x, y, xM, yM, this.ctx);
                     x = xM;
                     y = yM;
