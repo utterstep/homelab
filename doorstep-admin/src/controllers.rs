@@ -1,17 +1,26 @@
-use std::fs::Metadata;
+use std::{
+    cmp::Reverse,
+    fs::Metadata,
+    path::{Path, PathBuf},
+};
 
 use eyre::WrapErr;
 use tokio::fs::File;
 use tracing::debug;
 use xxhash_rust::xxh32::xxh32;
 
-use crate::{config::HASH_SEED, error::DoorstepError, image::image_to_bitmap, state::AppState};
+use crate::{
+    config::HASH_SEED,
+    error::DoorstepError,
+    image::image_to_bitmap,
+    state::{AppState, BackgroundState},
+};
 
 #[tracing::instrument(skip(bytes, app_state), fields(image_size = bytes.len()), err)]
 pub(crate) async fn update_background(
     name: &str,
     bytes: Vec<u8>,
-    app_state: AppState,
+    app_state: &AppState,
 ) -> Result<u32, DoorstepError> {
     let file_path = app_state.config.backgrounds_dir().join(name);
     let mut file = File::create(&file_path)
@@ -34,8 +43,8 @@ pub(crate) async fn update_background(
     let hash = xxh32(&bytes, HASH_SEED);
     debug!(hash, "New background image written, saving to state");
 
-    let mut background = app_state.background.lock().await;
-    *background = Some(bytes);
+    let mut background = app_state.background.write().await;
+    *background = Some(BackgroundState::new(bytes, hash, name.to_owned()));
 
     Ok(hash)
 }
@@ -43,6 +52,7 @@ pub(crate) async fn update_background(
 #[derive(Debug)]
 pub struct BackgroundFile {
     name: String,
+    full_path: PathBuf,
     metadata: Metadata,
 }
 
@@ -54,11 +64,15 @@ impl BackgroundFile {
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
+
+    pub fn full_path(&self) -> &Path {
+        &self.full_path
+    }
 }
 
 #[tracing::instrument(skip(app_state), err)]
 pub(crate) async fn list_backgrounds(
-    app_state: AppState,
+    app_state: &AppState,
 ) -> Result<Vec<BackgroundFile>, DoorstepError> {
     let backgrounds_dir = app_state.config.backgrounds_dir();
     let mut files = Vec::new();
@@ -74,13 +88,21 @@ pub(crate) async fn list_backgrounds(
     {
         let metadata = entry.metadata().await.wrap_err("Failed to read metadata")?;
         if metadata.is_file() {
+            let full_path = entry
+                .path()
+                .canonicalize()
+                .wrap_err("Failed to canonicalize path")?;
+
             // add filename along with its metadata
             files.push(BackgroundFile {
                 name: entry.file_name().to_string_lossy().to_string(),
+                full_path,
                 metadata,
             });
         }
     }
+
+    files.sort_unstable_by_key(|file| Reverse(file.metadata().modified().ok()));
 
     Ok(files)
 }
@@ -103,13 +125,14 @@ impl Background {
 
 #[tracing::instrument(skip(app_state), err)]
 pub(crate) async fn get_background(app_state: AppState) -> Result<Background, DoorstepError> {
-    let background = app_state.background.lock().await;
-    let bytes = background
-        .as_ref()
-        .ok_or_else(|| DoorstepError::NotFound("No background set".to_owned()))?
-        .clone();
+    let background = app_state.background.read().await;
 
-    let hash = xxh32(&bytes, HASH_SEED);
-
-    Ok(Background { bytes, hash })
+    match background.as_ref() {
+        Some(background) => {
+            let bytes = background.data().to_vec();
+            let hash = background.hash();
+            Ok(Background { bytes, hash })
+        }
+        None => Err(DoorstepError::NotFound("No background set".to_owned())),
+    }
 }

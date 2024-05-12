@@ -11,9 +11,12 @@ use tracing::{debug, info};
 
 use crate::{controllers, error::DoorstepError, state::AppState};
 
+mod admin;
+pub use admin::*;
+
 #[tracing::instrument(skip(app_state))]
 pub async fn backgrounds_list(State(app_state): State<AppState>) -> impl IntoResponse {
-    let files = controllers::list_backgrounds(app_state)
+    let files = controllers::list_backgrounds(&app_state)
         .await
         .wrap_err("Failed to list backgrounds")?
         .into_iter()
@@ -72,7 +75,7 @@ pub async fn update_background(
     let name =
         name.ok_or_else(|| DoorstepError::InvalidRequest("No background provided".to_owned()))?;
 
-    let hash = controllers::update_background(&name, bytes, app_state.clone())
+    let hash = controllers::update_background(&name, bytes, &app_state)
         .await
         .wrap_err("Failed to update background")?;
 
@@ -82,7 +85,7 @@ pub async fn update_background(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct BackgroundRequestQuery {
+pub struct BackgroundQuery {
     known_hash: Option<u32>,
 }
 
@@ -92,7 +95,7 @@ pub struct BackgroundRequestQuery {
 #[tracing::instrument(skip(app_state))]
 pub async fn get_background(
     State(app_state): State<AppState>,
-    Query(query): Query<BackgroundRequestQuery>,
+    Query(query): Query<BackgroundQuery>,
 ) -> impl IntoResponse {
     let background = controllers::get_background(app_state)
         .await

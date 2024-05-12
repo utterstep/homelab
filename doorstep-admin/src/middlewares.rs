@@ -4,32 +4,42 @@ use axum::{
     extract::{ConnectInfo, Request, State},
     http::StatusCode,
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::{AppendHeaders, IntoResponse, Response},
+    RequestExt,
 };
-use tracing::{debug, info, warn};
+use axum_auth::AuthBasic;
+use tracing::{info, warn};
 
 use crate::state::AppState;
 
 #[tracing::instrument(skip(app_state, addr, req, next), fields(ip = %addr.ip(), port = addr.port()))]
-pub async fn admin_subnet_restricted(
+pub async fn admin_basic_auth(
     State(app_state): State<AppState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    req: Request,
+    mut req: Request,
     next: Next,
 ) -> Response {
-    let allowed_configuration_from = app_state.config.admin_subnet();
+    let auth = req.extract_parts::<AuthBasic>().await;
+    let headers = AppendHeaders([("WWW-Authenticate", "Basic realm=\"Rezo doorstep admin\"")]);
+    let admin_user = app_state.config.admin_user();
+    let admin_pass = app_state.config.admin_password();
 
-    debug!(
-        %allowed_configuration_from,
-        "Checking if admin request is allowed"
-    );
+    match auth {
+        Ok(AuthBasic((user, pass))) => {
+            if let Some(pass) = pass {
+                if user == admin_user && pass == admin_pass {
+                    info!(%addr, "Authenticated");
+                    return next.run(req).await;
+                }
+            }
+            warn!(%addr, "Unauthorized");
 
-    if !allowed_configuration_from.contains(&addr.ip()) {
-        warn!(%addr, "Forbidden request");
+            return (StatusCode::UNAUTHORIZED, headers, "Unauthorized").into_response();
+        }
+        Err(e) => {
+            warn!(%addr, ?e, "Failed to extract basic auth");
 
-        return ((StatusCode::FORBIDDEN, "Forbidden")).into_response();
+            return (StatusCode::UNAUTHORIZED, headers, e.1).into_response();
+        }
     }
-
-    info!(%addr, "Allowing admin request");
-    next.run(req).await
 }

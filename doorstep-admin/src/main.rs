@@ -6,7 +6,7 @@ use axum::{
 };
 use eyre::{Result, WrapErr};
 use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
 use tracing_tree::HierarchicalLayer;
@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
         )
         .init();
 
-    let mut app_state = AppStateBuilder::new().with_config(config).build();
+    let mut app_state = AppStateBuilder::new().with_config(config.clone()).build();
     app_state
         .try_init_background()
         .await
@@ -54,9 +54,15 @@ async fn main() -> Result<()> {
     let priviliged_router = axum::Router::new()
         .route("/background/update/", post(routes::update_background))
         .route("/background/list/", get(routes::backgrounds_list))
+        .nest_service(
+            "/background/files/",
+            ServeDir::new(config.backgrounds_dir()),
+        )
+        .route("/background/", get(routes::background_admin_page))
+        .nest_service("/static/", ServeDir::new(config.static_dir()))
         .route_layer(middleware::from_fn_with_state(
             app_state.clone(),
-            middlewares::admin_subnet_restricted,
+            middlewares::admin_basic_auth,
         ));
 
     let common_router = axum::Router::new().route("/background/", get(routes::get_background));

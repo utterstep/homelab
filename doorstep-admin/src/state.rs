@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 use crate::config::Config;
 
+mod background;
 mod init;
+
+pub use self::background::BackgroundState;
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
-    pub background: Arc<Mutex<Option<Vec<u8>>>>,
+    pub background: Arc<RwLock<Option<BackgroundState>>>,
 }
 
 pub struct AppStateBuilder {
@@ -29,7 +32,7 @@ impl AppStateBuilder {
     pub fn build(self) -> AppState {
         AppState {
             config: self.config.expect("config is required"),
-            background: Arc::new(Mutex::new(None)),
+            background: Arc::new(RwLock::new(None)),
         }
     }
 }
