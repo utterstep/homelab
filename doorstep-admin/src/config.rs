@@ -18,7 +18,6 @@ pub struct Config {
     admin_user: String,
     admin_password: String,
     backgrounds_dir: PathBuf,
-    static_dir: PathBuf,
     #[serde(default = "default_background_width")]
     background_width: u32,
     #[serde(default = "default_background_height")]
@@ -41,10 +40,6 @@ impl Config {
 
     pub fn backgrounds_dir(&self) -> &Path {
         &self.backgrounds_dir
-    }
-
-    pub fn static_dir(&self) -> &Path {
-        &self.static_dir
     }
 
     pub fn background_width(&self) -> u32 {

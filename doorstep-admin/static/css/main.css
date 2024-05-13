@@ -14,6 +14,7 @@ hr {
 }
 
 .background-canvas {
+    cursor: pointer;
     border: 1px solid black;
 }
 

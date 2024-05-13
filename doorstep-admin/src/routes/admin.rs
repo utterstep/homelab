@@ -15,6 +15,7 @@ fn head(title: &str) -> maud::Markup {
             }
             script type="module" src="/admin/static/js/main.js" {}
             script type="module" src="/admin/static/js/controllers.js" {}
+            meta name="viewport" content="width=device-width, user-scalable=no";
         }
     }
 }

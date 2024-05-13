@@ -5,6 +5,7 @@ use axum::{
     routing::{get, post},
 };
 use eyre::{Result, WrapErr};
+use memory_serve::{load_assets, MemoryServe};
 use tokio::net::TcpListener;
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing::info;
@@ -51,6 +52,11 @@ async fn main() -> Result<()> {
         .await
         .wrap_err("Failed to load background")?;
 
+    let admin_assets = load_assets!("static");
+    let admin_assets_server = MemoryServe::new(admin_assets)
+        .index_file(None)
+        .into_router();
+
     let priviliged_router = axum::Router::new()
         .route("/background/update/", post(routes::update_background))
         .route("/background/list/", get(routes::backgrounds_list))
@@ -59,7 +65,7 @@ async fn main() -> Result<()> {
             ServeDir::new(config.backgrounds_dir()),
         )
         .route("/background/", get(routes::background_admin_page))
-        .nest_service("/static/", ServeDir::new(config.static_dir()))
+        .nest("/static/", admin_assets_server)
         .route_layer(middleware::from_fn_with_state(
             app_state.clone(),
             middlewares::admin_basic_auth,

@@ -39,7 +39,15 @@ window.Stimulus.register(
             // add timestamp to the filename to avoid overwriting
             const name = this.nameInputTarget.value;
             const timestamp = Math.round(new Date().getTime() / 1000);
-            const filename = `${name}-${timestamp}.png`;
+            // if name contains previous timestamp, remove it
+            const nameParts = name.split("-");
+            if (nameParts.length > 1) {
+                const lastPart = nameParts.pop();
+                if (lastPart.match(/^\d{10+}$/)) {
+                    nameParts.push(timestamp);
+                }
+            }
+            const filename = `${nameParts.join("-")}-${timestamp}.png`;
 
             this.canvasTarget.toBlob(async (pngBlob) => {
                 const formData = new FormData();
@@ -79,7 +87,7 @@ window.Stimulus.register(
         }
 
         initDrawing() {
-            let pressedMouse = false;
+            let pressedPointer = false;
             let x;
             let y;
 
@@ -91,15 +99,21 @@ window.Stimulus.register(
             };
 
             const startDrawing = (e) => {
-                pressedMouse = true;
+                e.preventDefault();
+
+                pressedPointer = true;
 
                 x = e.offsetX * this.dpr;
                 y = e.offsetY * this.dpr;
             };
 
             const drawLine = (e) => {
-                if (pressedMouse) {
-                    this.canvasTarget.style.cursor = "crosshair";
+                e.preventDefault();
+
+                if (pressedPointer) {
+                    if (!e.touches) {
+                        this.canvasTarget.style.cursor = "crosshair";
+                    }
                     const xM = e.offsetX * this.dpr;
                     const yM = e.offsetY * this.dpr;
                     drawLineOnCanvas(x, y, xM, yM, this.ctx);
@@ -108,14 +122,24 @@ window.Stimulus.register(
                 }
             };
 
-            const stopDrawing = () => {
-                pressedMouse = false;
-                this.canvasTarget.style.cursor = "default";
+            const stopDrawing = (e) => {
+                e.preventDefault();
+
+                pressedPointer = false;
+                this.canvasTarget.style.cursor = "pointer";
             };
 
-            this.canvasTarget.addEventListener("mousedown", startDrawing);
-            this.canvasTarget.addEventListener("mousemove", drawLine);
-            this.canvasTarget.addEventListener("mouseup", stopDrawing);
+            // pointer events
+            this.canvasTarget.addEventListener("pointerdown", startDrawing);
+            this.canvasTarget.addEventListener("pointermove", drawLine);
+            this.canvasTarget.addEventListener("pointerup", stopDrawing);
+
+            // on touch events – prevent scrolling
+            const dropEvent = (e) => e.preventDefault();
+
+            this.canvasTarget.addEventListener("touchstart", dropEvent);
+            this.canvasTarget.addEventListener("touchmove", dropEvent);
+            this.canvasTarget.addEventListener("touchend", dropEvent);
         }
     },
 );
