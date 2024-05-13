@@ -1,6 +1,6 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use eyre::WrapErr;
-use maud::html;
+use maud::{html, DOCTYPE};
 
 use crate::{controllers, error::DoorstepError, state::AppState};
 
@@ -15,7 +15,7 @@ fn head(title: &str) -> maud::Markup {
             }
             script type="module" src="/admin/static/js/main.js" {}
             script type="module" src="/admin/static/js/controllers.js" {}
-            meta name="viewport" content="width=device-width, user-scalable=no";
+            meta name="viewport" content="width=device-width, initial-scale=1";
         }
     }
 }
@@ -41,7 +41,8 @@ pub async fn background_admin_page(State(state): State<AppState>) -> impl IntoRe
     let height = state.config.background_height();
 
     let markup = html! {
-        html {
+        (DOCTYPE)
+        html lang="en" {
             (head("Homelab – Doorstep Admin – Backgrounds"))
             body {
                 header {
