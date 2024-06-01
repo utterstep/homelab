@@ -1,0 +1,17 @@
+let ice_phase_transition_energy: Energy / Mass = 334kJ / kg
+
+# typical portable ice maker
+let refrigirator_ice_production: Mass / Time = 26.6lbs / day
+
+let air_heat_capacity = 700J / kg / K
+let air_density = 1.204 kg/m^3
+
+# excluding balcony and the stairs
+let apartment_area = 70m^2
+let ceiling_height = 3.5m
+
+let apartment_volume = apartment_area * ceiling_height
+let air_mass_in_flat = apartment_volume * air_density
+let flat_heat_capacity = air_heat_capacity * air_mass_in_flat
+
+print("Ice maker can cool our flat by ~{floor((ice_phase_transition_energy * refrigirator_ice_production) / flat_heat_capacity)}")
